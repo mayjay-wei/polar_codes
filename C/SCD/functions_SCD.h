@@ -1,15 +1,25 @@
-int uni ();
+#ifndef FUNCTIONS_SCD_
+#define FUNCTIONS_SCD_
 
-float randn (float mu, float sigma);
 
-void swap_int(int* a, int* b);
+#define MAXQR           (31)
+#define POLAR_CODE_LENGTH (1024)
+#define POW2(X) (1 << (X))
 
-int partition_int (int arr[], int low, int high);
+
+int uni();
+
+float randn(float mu, float sigma);
+
+void swap_int(int *a, int *b);
+
+int partition_int(int arr[], int low, int high);
 
 void quickSort_int(int arr[], int low, int high);
 
-int is_vec_mem(int in, int Nt, int N, int *data_pos_sorted);
+void encode(int *u);
 
-void encode(int *u, int N);
+void decode(int *msg_cap, unsigned n, unsigned K, const int *LLR_Q,
+            const int *info_nodes, const int *data_pos);
 
-void decode(int *msg_cap, int n, int N, int K, int *LLR_Q, int *info_nodes, int *data_pos);
+#endif

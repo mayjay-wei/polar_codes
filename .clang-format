@@ -1,0 +1,40 @@
+BasedOnStyle: Google
+IndentWidth: 4 # The number of columns to use for indentation.
+TabWidth: 4 #The number of columns used for tab stops.
+UseTab: Never
+ColumnLimit: 80
+---
+Language: Cpp
+# Force pointers to the type for C++.
+DerivePointerAlignment: false
+AlignAfterOpenBracket: Align
+PointerAlignment: Right
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: false  # 是否允许跨越空白行进行对齐
+  AcrossComments: true      # 是否允许跨越注释行进行对齐
+AlignEscapedNewlines: Left
+BreakBeforeBinaryOperators: All # 運算子換行
+AlignOperands: AlignAfterOperator # 換行的運算子切齊
+AlignTrailingComments:
+  Kind: Always # 尾部註解對齊
+  OverEmptyLines: 2
+BinPackArguments: false # 函數參數換行
+BreakBeforeBraces: Custom # 大括號換行
+AllowShortIfStatementsOnASingleLine: Never
+BraceWrapping:
+  AfterCaseLabel: false # Switch case 換行
+  AfterControlStatement: Never # 控制語句換行
+  BeforeElse: false # else 換行
+IndentCaseLabels: false # Switch case 縮排
+AllowShortLoopsOnASingleLine: false
+KeepEmptyLines: # 保留空行
+  AtEndOfFile: true # 文件末尾
+  AtStartOfBlock: false
+  AtStartOfFile: false
+ForEachMacros: [ foreach, Q_FOREACH, BOOST_FOREACH ]
+#BreakBeforeForLoopMacros: true
+SortIncludes: Never
+#ReflowComments: Always
+AllowShortCaseExpressionOnASingleLine: True
+AllowShortCaseLabelsOnASingleLine: True
