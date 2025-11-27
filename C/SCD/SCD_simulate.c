@@ -4,11 +4,13 @@
 #include <time.h>
 #include "functions_SCD.h"
 
+#include <string.h>
+
 #define MIN(x, y)        ((x < y) ? x : y)
 #define MAXI_MACRO(x, y) ((x < y) ? y : x)
 
 /* Channel reliability in increasing order*/
-static const int Q[POLAR_CODE_LENGTH] = {
+static const int Q[1024] = {
     0,    1,    2,   4,    8,    16,   32,   3,    5,    64,   9,   6,    17,
     10,   18,   128, 12,   33,   65,   20,   256,  34,   24,   36,  7,    129,
     66,   512,  11,  40,   68,   130,  19,   13,   48,   14,   72,  257,  21,
@@ -93,57 +95,52 @@ static const int Q[POLAR_CODE_LENGTH] = {
 // No. of levels of Noise
 #define NUM_EbN0dB (10)
 // Number of Simulations
-#define NUM_SIM    (10 * 10000)
+#define NUM_SIM    (NUM_EbN0dB * 10000)
 
 int main() {
     srand((unsigned)time(NULL));
 
-    float enc_cpu_time_used = 0;
+    float encode_time_used = 0;
     float dec_cpu_time_used = 0;
     const clock_t start = clock();
-
-    /* Depth of tree */
-    /* log function */
-    const unsigned n = (unsigned)__builtin_ctz(POLAR_CODE_LENGTH);
 
     /* Rate of code */
     const float rate = 0.5f;
 
     /* Number of information bits */
-    const unsigned K = (unsigned)((float)POLAR_CODE_LENGTH * rate);
+    const unsigned K = (unsigned)(POLAR_CODE_LENGTH * rate);
 
     /* Boolean array with information nodes pos = 1 */
-    int info_nodes[POLAR_CODE_LENGTH];
+    bool is_info_nodes[POLAR_CODE_LENGTH];
 
     /* Position of frozen bits */
 
+    // Set the least reliable N-K bits as frozen, i.e., set to 0.
     for (unsigned i_Q = 0; i_Q < POLAR_CODE_LENGTH - K; i_Q++) {
-        info_nodes[Q[i_Q]] = 0;
+        is_info_nodes[Q[i_Q]] = false;
     }
 
     /* Position of Information bits */
-    int data_pos[K];
+    // The information bit set, K most reliable bits' positions.
+    int data_positions[K];
 
+    // FIXME: if length is not 1024, the position will over the boundary of
+    // codeword!
     for (unsigned i_Q = 0; i_Q < K; i_Q++) {
-        data_pos[i_Q] = Q[i_Q + POLAR_CODE_LENGTH - K];
-        info_nodes[Q[i_Q + POLAR_CODE_LENGTH - K]] = 1;
+        data_positions[i_Q] = Q[i_Q + POLAR_CODE_LENGTH - K];
+        is_info_nodes[Q[i_Q + POLAR_CODE_LENGTH - K]] = true;
     }
-
-    /* Max received value */
-
-    /* Max integer received values */
 
     /* Eb/N0 in dB */
     float EbN0dB[NUM_EbN0dB];
-    EbN0dB[0] = 1;
-    for (unsigned i_e = 1; i_e < NUM_EbN0dB; i_e++) {
-        EbN0dB[i_e] = EbN0dB[i_e - 1] + 0.3f;
+    for (unsigned i_e = 0; i_e < NUM_EbN0dB; i_e++) {
+        EbN0dB[i_e] = -10.0f + 2.0f * (float)i_e;
     }
 
     /* Standard Deviation of noise */
-    float sigma[NUM_EbN0dB];
+    float std_of_noise[NUM_EbN0dB];
     for (unsigned i_std = 0; i_std < NUM_EbN0dB; i_std++) {
-        sigma[i_std]
+        std_of_noise[i_std]
             = sqrtf(1.0f / (2.0f * rate) * powf(10.0f, -EbN0dB[i_std] / 10.0f));
     }
 
@@ -155,55 +152,54 @@ int main() {
         printf("Count %d of %d\n", i_sig + 1, NUM_EbN0dB);
 
         int err_count = 0;
-        const float sig = sigma[i_sig];
 
         /*Each Simulation*/
         for (unsigned i_num_sim = 0; i_num_sim < NUM_SIM; i_num_sim++) {
             /* Generating a uniformly distributed binary random vector for
              * message */
-            int msg[K];
+            bool messages[K];
             for (unsigned i_msg = 0; i_msg < K; i_msg++) {
-                msg[i_msg] = uni();
+                messages[i_msg] = uniformBinaryRandomNumber();
             }
 
             /* Encoding the Transmit vector */
-            const clock_t enc_start = clock();
+            const clock_t encode_time_start = clock();
 
-            int u[POLAR_CODE_LENGTH] = {0};
+            int codeword[POLAR_CODE_LENGTH] = {0};
 
             /*Assigning data to data indices*/
+            // Only K positions in codeword are set to message bits, rest are
+            // frozen to 0.
             for (unsigned i_ud = 0; i_ud < K; i_ud++) {
-                u[data_pos[i_ud]] = msg[i_ud];
+                codeword[data_positions[i_ud]] = messages[i_ud];
             }
 
-            encode(u);
+            Encode(codeword);
 
-            const clock_t enc_end = clock();
+            const clock_t encode_time_end = clock();
 
-            enc_cpu_time_used += (float)(enc_end - enc_start);
+            encode_time_used += (float)(encode_time_end - encode_time_start);
 
             /* BPSK modulation and Adding Gaussian noise of zero mean and
              * variance sigma^2 */
             /* Energy per bit */
-            int x[POLAR_CODE_LENGTH];
+            float x[POLAR_CODE_LENGTH];
             float y[POLAR_CODE_LENGTH];
 
             for (unsigned i_bpsk = 0; i_bpsk < POLAR_CODE_LENGTH; i_bpsk++) {
-                const int Eb = 1;
-                x[i_bpsk]
-                    = (int)(sqrtf((float)Eb) * (float)(1 - 2 * u[i_bpsk]));
-                y[i_bpsk] = (float)x[i_bpsk] + sig * randn(0, 1);
+                const float Eb = 1.0f;
+                x[i_bpsk] = sqrtf(Eb) * (float)(1 - 2 * codeword[i_bpsk]);
+                y[i_bpsk] = x[i_bpsk] + randn(0, std_of_noise[i_sig]);
             }
 
-            /* Channel LLR calculation and Quantization of LLR values */
-            float LLR[POLAR_CODE_LENGTH];
+            /* Channel LLR Quantization */
+            //? Why does quantization needed?
             int LLR_Q[POLAR_CODE_LENGTH];
             for (unsigned i_ch = 0; i_ch < POLAR_CODE_LENGTH; i_ch++) {
                 const int rmax = 3;
-                // LLR[i_ch] = 2*y[i_ch]/(pow(sig,2));
-                LLR[i_ch] = y[i_ch];
-                LLR_Q[i_ch]
-                    = (int)floorf(LLR[i_ch] / (float)rmax * (float)MAXQR);
+                LLR_Q[i_ch] = (int)floorf(y[i_ch] / (float)rmax * (float)MAXQR);
+            }
+            for (unsigned i_ch = 0; i_ch < POLAR_CODE_LENGTH; i_ch++) {
                 if (LLR_Q[i_ch] > MAXQR) {
                     LLR_Q[i_ch] = MAXQR;
                 } else if (LLR_Q[i_ch] < -(MAXQR + 1)) {
@@ -217,7 +213,7 @@ int main() {
             /* Successive Cancellation Decoding */
             const clock_t dec_start = clock();
 
-            decode(msg_cap, n, K, LLR_Q, info_nodes, data_pos);
+            Decode(msg_cap, K, LLR_Q, is_info_nodes, data_positions);
 
             const clock_t dec_end = clock();
 
@@ -225,7 +221,7 @@ int main() {
 
             /*Number of errors and BER*/
             for (unsigned i_err = 0; i_err < K; i_err++) {
-                if (msg_cap[i_err] != msg[i_err]) {
+                if (msg_cap[i_err] != messages[i_err]) {
                     err_count++;
                 }
             }
@@ -240,11 +236,11 @@ int main() {
 
     const clock_t end = clock();
     const float cpu_time_used = (float)(end - start) / CLOCKS_PER_SEC;
-    enc_cpu_time_used = enc_cpu_time_used / CLOCKS_PER_SEC;
+    encode_time_used = encode_time_used / CLOCKS_PER_SEC;
     dec_cpu_time_used = dec_cpu_time_used / CLOCKS_PER_SEC;
     printf("Time taken encode %d messages is %0.2f secs\n",
            NUM_SIM * NUM_EbN0dB,
-           enc_cpu_time_used);
+           encode_time_used);
     printf(
         "Time taken decode %d codewords for unrolled decoder is %0.2f secs\n",
         NUM_SIM * NUM_EbN0dB,
@@ -255,7 +251,7 @@ int main() {
     printf("Decoder throughput is %0.2f Mbps\n",
            (float)(NUM_SIM * NUM_EbN0dB) / (dec_cpu_time_used * 1000));
     printf("Encoder throughput is %0.2f Mbps\n",
-           (float)(NUM_SIM * NUM_EbN0dB) / (enc_cpu_time_used * 1000));
+           (float)(NUM_SIM * NUM_EbN0dB) / (encode_time_used * 1000));
 
     return 0;
 }
