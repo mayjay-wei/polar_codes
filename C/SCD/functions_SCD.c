@@ -111,24 +111,17 @@ void Decode(int *msg_cap, const unsigned K, const int *LLR_Q,
     int ucap[POLAR_CODE_STAGE + 1][POLAR_CODE_LENGTH];
 
     /* Node state vector */
-    int ns[2 * POLAR_CODE_LENGTH - 1] = {0};
+    int ns[POW2(POLAR_CODE_STAGE + 1) - 1] = {0};
 
     /* Propagation parameters */
     unsigned node = 0;
     unsigned depth = 0;
     bool is_all_bits_decode = false;
-    unsigned temp = 0;
 
     /* Traverse until all bits are decoded */
     while (!is_all_bits_decode) {
         /* Position of node in node state vector */
         const unsigned npos = POW2(depth) - 1U + node;
-
-        /* Length of current sub-vector */
-        temp = POW2(POLAR_CODE_STAGE - depth);
-
-        /* Index of current node in node_type vector */
-        const unsigned node_type_ind = node * temp;
 
         /* Check for leaf node */
         if (depth == POLAR_CODE_STAGE) {
@@ -147,48 +140,53 @@ void Decode(int *msg_cap, const unsigned K, const int *LLR_Q,
         /* Non-leaf nodes */
         switch (ns[npos]) {
         case 0: { /* Propagate to left child */
+            /* Length of current sub-vector */
+            // eq (4.3) of the 2^(n-s-1)
+            const unsigned temp = POW2(POLAR_CODE_STAGE - depth - 1);
             /* f_minsum and storage */
-            for (unsigned i_L = 0; i_L < temp / 2; i_L++) {
+            for (unsigned i_L = 0; i_L < temp; i_L++) {
                 L[depth + 1][i_L]
-                    = f_macro(L[depth][i_L], L[depth][i_L + temp / 2]);
+                    = f_macro(L[depth][i_L], L[depth][i_L + temp]);
             }
 
             /* Next node: Left child */
             node *= 2;
             depth += 1;
 
-            /* Incoming belief length for left child */
-            temp /= 2;
-
             ns[npos] = 1;
             break;
         }
         case 1: { /* Propagate to right child */
+            /* Length of current sub-vector */
+            const unsigned temp = POW2(POLAR_CODE_STAGE - depth - 1);
+            /* Index of current node in node_type vector */
+            const unsigned node_type_ind = node * (temp * 2);
             /* g_minsum and storage */
-            for (unsigned i_L = 0; i_L < temp / 2; i_L++) {
+            for (unsigned i_L = 0; i_L < temp; i_L++) {
                 L[depth + 1][i_L]
                     = g_macro(ucap[depth + 1][i_L + node_type_ind],
                               L[depth][i_L],
-                              L[depth][i_L + temp / 2]);
+                              L[depth][i_L + temp]);
             }
 
             /* Next node: right child */
             node = node * 2 + 1;
             depth += 1;
 
-            /* Incoming belief length for right child */
-            temp /= 2;
-
             ns[npos] = 2;
             break;
         }
         case 2: { /* Propagate to parent node */
+            /* Length of current sub-vector */
+            const unsigned temp = POW2(POLAR_CODE_STAGE - depth - 1);
+            /* Index of current node in node_type vector */
+            const unsigned node_type_ind = node * (temp * 2);
             /* Combine */
-            for (unsigned i_L = 0, count = 0; i_L < temp; i_L++, count++) {
+            for (unsigned i_L = 0, count = 0; i_L < temp * 2; i_L++, count++) {
                 ucap[depth][i_L + node_type_ind]
-                    = count < temp / 2
+                    = count < temp
                         ? ucap[depth + 1][i_L + node_type_ind]
-                              ^ ucap[depth + 1][i_L + node_type_ind + temp / 2]
+                              ^ ucap[depth + 1][i_L + node_type_ind + temp]
                         : ucap[depth + 1][i_L + node_type_ind];
             }
 

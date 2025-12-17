@@ -93,7 +93,7 @@ static const int Q[1024] = {
 
 /* Simulation Parameters */
 // No. of levels of Noise
-#define NUM_EbN0dB (10)
+#define NUM_EbN0dB (8)
 // Number of Simulations
 #define NUM_SIM    (NUM_EbN0dB * 10000)
 
@@ -133,9 +133,10 @@ int main() {
 
     /* Eb/N0 in dB */
     float EbN0dB[NUM_EbN0dB];
-    for (unsigned i_e = 0; i_e < NUM_EbN0dB; i_e++) {
+    for (unsigned i_e = 0; i_e < NUM_EbN0dB - 1; i_e++) {
         EbN0dB[i_e] = -10.0f + 2.0f * (float)i_e;
     }
+    EbN0dB[NUM_EbN0dB - 1] = 1000.0f;
 
     /* Standard Deviation of noise */
     float std_of_noise[NUM_EbN0dB];
