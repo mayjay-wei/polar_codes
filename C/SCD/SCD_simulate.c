@@ -97,11 +97,11 @@ static const int Q[1024] = {
 // Number of Simulations
 #define NUM_SIM    (NUM_EbN0dB * 10000)
 
-int main() {
+int main(void) {
     srand((unsigned)time(NULL));
 
-    float encode_time_used = 0;
-    float dec_cpu_time_used = 0;
+    float encode_time_used = 0.0f;
+    float dec_cpu_time_used = 0.0f;
     const clock_t start = clock();
 
     /* Rate of code */
@@ -189,7 +189,7 @@ int main() {
 
             for (unsigned i_bpsk = 0; i_bpsk < POLAR_CODE_LENGTH; i_bpsk++) {
                 const float Eb = 1.0f;
-                x[i_bpsk] = sqrtf(Eb) * (float)(1 - 2 * codeword[i_bpsk]);
+                x[i_bpsk] = sqrtf(Eb) * (1.0f - 2.0f * (float)codeword[i_bpsk]);
                 y[i_bpsk] = x[i_bpsk] + randn(0, std_of_noise[i_sig]);
             }
 
@@ -197,8 +197,8 @@ int main() {
             //? Why does quantization needed?
             int LLR_Q[POLAR_CODE_LENGTH];
             for (unsigned i_ch = 0; i_ch < POLAR_CODE_LENGTH; i_ch++) {
-                const int rmax = 3;
-                LLR_Q[i_ch] = (int)floorf(y[i_ch] / (float)rmax * (float)MAXQR);
+                const float rmax = 3.0f;
+                LLR_Q[i_ch] = (int)floorl(y[i_ch] / rmax * (float)MAXQR);
             }
             for (unsigned i_ch = 0; i_ch < POLAR_CODE_LENGTH; i_ch++) {
                 if (LLR_Q[i_ch] > MAXQR) {
@@ -250,9 +250,9 @@ int main() {
            NUM_SIM,
            cpu_time_used);
     printf("Decoder throughput is %0.2f Mbps\n",
-           (float)(NUM_SIM * NUM_EbN0dB) / (dec_cpu_time_used * 1000));
+           (float)(NUM_SIM * NUM_EbN0dB) / (dec_cpu_time_used * 1000.0f));
     printf("Encoder throughput is %0.2f Mbps\n",
-           (float)(NUM_SIM * NUM_EbN0dB) / (encode_time_used * 1000));
+           (float)(NUM_SIM * NUM_EbN0dB) / (encode_time_used * 1000.0f));
 
     return 0;
 }
