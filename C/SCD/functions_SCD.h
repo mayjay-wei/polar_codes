@@ -5,7 +5,7 @@
 
 #define MAXQR             (31)
 #define POW2(X)           (1 << (X))
-#define POLAR_CODE_STAGE  (2)
+#define POLAR_CODE_STAGE  (10)
 #define POLAR_CODE_LENGTH (POW2(POLAR_CODE_STAGE))
 
 bool uniformBinaryRandomNumber();

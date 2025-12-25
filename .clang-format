@@ -3,12 +3,10 @@ IndentWidth: 4 # The number of columns to use for indentation.
 TabWidth: 4 #The number of columns used for tab stops.
 UseTab: Never
 ColumnLimit: 80
----
-Language: Cpp
 # Force pointers to the type for C++.
 DerivePointerAlignment: false
-AlignAfterOpenBracket: Align
 PointerAlignment: Right
+AlignAfterOpenBracket: Align
 AlignConsecutiveMacros:
   Enabled: true
   AcrossEmptyLines: false  # 是否允许跨越空白行进行对齐
@@ -21,7 +19,7 @@ AlignTrailingComments:
   OverEmptyLines: 2
 BinPackArguments: false # 函數參數換行
 BreakBeforeBraces: Custom # 大括號換行
-AllowShortIfStatementsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: WithoutElse
 BraceWrapping:
   AfterCaseLabel: false # Switch case 換行
   AfterControlStatement: Never # 控制語句換行

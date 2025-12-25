@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#define MIN(x, y)        ((x < y) ? x : y)
+#define MIN(x, y) ((x < y) ? x : y)
 #define MAXI_MACRO(x, y) ((x < y) ? y : x)
 
 /* Channel reliability in increasing order*/
@@ -95,7 +95,9 @@ static const int Q[1024] = {
 // No. of levels of Noise
 #define NUM_EbN0dB (8)
 // Number of Simulations
-#define NUM_SIM    (NUM_EbN0dB * 10000)
+#define NUM_SIM (NUM_EbN0dB * 10000)
+
+#include "tree_encode.h"
 
 int main(void) {
     srand((unsigned)time(NULL));
@@ -141,8 +143,8 @@ int main(void) {
     /* Standard Deviation of noise */
     float std_of_noise[NUM_EbN0dB];
     for (unsigned i_std = 0; i_std < NUM_EbN0dB; i_std++) {
-        std_of_noise[i_std]
-            = sqrtf(1.0f / (2.0f * rate) * powf(10.0f, -EbN0dB[i_std] / 10.0f));
+        std_of_noise[i_std] =
+            sqrtf(1.0f / (2.0f * rate) * powf(10.0f, -EbN0dB[i_std] / 10.0f));
     }
 
     /* Bit Error Rate */
@@ -166,7 +168,7 @@ int main(void) {
             /* Encoding the Transmit vector */
             const clock_t encode_time_start = clock();
 
-            int codeword[POLAR_CODE_LENGTH] = {0};
+            uint8_t codeword[POLAR_CODE_LENGTH] = {0};
 
             /*Assigning data to data indices*/
             // Only K positions in codeword are set to message bits, rest are
@@ -175,7 +177,10 @@ int main(void) {
                 codeword[data_positions[i_ud]] = messages[i_ud];
             }
 
-            Encode(codeword);
+            // Encode(codeword);
+            creatTree(POLAR_CODE_STAGE);
+            tree_encode(codeword, POLAR_CODE_LENGTH);
+            // 注意：不要手動釋放樹，creatTree() 會在下次調用時自動管理記憶體
 
             const clock_t encode_time_end = clock();
 
@@ -240,14 +245,11 @@ int main(void) {
     encode_time_used = encode_time_used / CLOCKS_PER_SEC;
     dec_cpu_time_used = dec_cpu_time_used / CLOCKS_PER_SEC;
     printf("Time taken encode %d messages is %0.2f secs\n",
-           NUM_SIM * NUM_EbN0dB,
-           encode_time_used);
+           NUM_SIM * NUM_EbN0dB, encode_time_used);
     printf(
         "Time taken decode %d codewords for unrolled decoder is %0.2f secs\n",
-        NUM_SIM * NUM_EbN0dB,
-        dec_cpu_time_used);
-    printf("Time taken to run %d simulations is %0.2f secs\n\n",
-           NUM_SIM,
+        NUM_SIM * NUM_EbN0dB, dec_cpu_time_used);
+    printf("Time taken to run %d simulations is %0.2f secs\n\n", NUM_SIM,
            cpu_time_used);
     printf("Decoder throughput is %0.2f Mbps\n",
            (float)(NUM_SIM * NUM_EbN0dB) / (dec_cpu_time_used * 1000.0f));

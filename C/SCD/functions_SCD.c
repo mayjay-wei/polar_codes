@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+#pragma GCC optimize("Ofast")
+
 #define f_macro(L1, L2) (SIGN(L1) * SIGN(L2) * MIN(ABS(L1), ABS(L2)))
 #define g_macro(u, L1, L2) \
     MIN(MAX((((1 - 2 * u) * L1) + L2), -(MAXQR + 1)), MAXQR)
@@ -32,8 +34,8 @@ float randn(const float mean, const float std) {
     }
 
     do {
-        U1 = -1 + (float)rand() / RAND_MAX * 2;  // NOLINT(*-msc50-cpp)
-        U2 = -1 + (float)rand() / RAND_MAX * 2;  // NOLINT(*-msc50-cpp)
+        U1 = -1 + (float)rand() / (float)(RAND_MAX) * 2;  // NOLINT(*-msc50-cpp)
+        U2 = -1 + (float)rand() / (float)(RAND_MAX) * 2;  // NOLINT(*-msc50-cpp)
         W = U1 * U1 + U2 * U2;
     } while (W >= 1 || W <= 0);
 
