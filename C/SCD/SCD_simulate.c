@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#define MIN(x, y) ((x < y) ? x : y)
+#define MIN(x, y)        ((x < y) ? x : y)
 #define MAXI_MACRO(x, y) ((x < y) ? y : x)
 
 /* Channel reliability in increasing order*/
@@ -95,9 +95,10 @@ static const int Q[1024] = {
 // No. of levels of Noise
 #define NUM_EbN0dB (8)
 // Number of Simulations
-#define NUM_SIM (NUM_EbN0dB * 10000)
+#define NUM_SIM    (NUM_EbN0dB * 10000)
 
 #include "tree_encode.h"
+#include "tree_decode.h"
 
 int main(void) {
     srand((unsigned)time(NULL));
@@ -143,8 +144,8 @@ int main(void) {
     /* Standard Deviation of noise */
     float std_of_noise[NUM_EbN0dB];
     for (unsigned i_std = 0; i_std < NUM_EbN0dB; i_std++) {
-        std_of_noise[i_std] =
-            sqrtf(1.0f / (2.0f * rate) * powf(10.0f, -EbN0dB[i_std] / 10.0f));
+        std_of_noise[i_std]
+            = sqrtf(1.0f / (2.0f * rate) * powf(10.0f, -EbN0dB[i_std] / 10.0f));
     }
 
     /* Bit Error Rate */
@@ -179,6 +180,7 @@ int main(void) {
 
             // Encode(codeword);
             creatTree(POLAR_CODE_STAGE);
+            createDecodeTree(POLAR_CODE_STAGE);  // Initialize decode tree
             tree_encode(codeword, POLAR_CODE_LENGTH);
             // 注意：不要手動釋放樹，creatTree() 會在下次調用時自動管理記憶體
 
@@ -198,6 +200,14 @@ int main(void) {
                 y[i_bpsk] = x[i_bpsk] + randn(0, std_of_noise[i_sig]);
             }
 
+#if 1
+            /* Channel LLR (Float) */
+            // Use float LLR directly for better accuracy
+            float LLR_float[POLAR_CODE_LENGTH];
+            for (unsigned i_ch = 0; i_ch < POLAR_CODE_LENGTH; i_ch++) {
+                LLR_float[i_ch] = y[i_ch];  // Direct float LLR
+            }
+#else
             /* Channel LLR Quantization */
             //? Why does quantization needed?
             int LLR_Q[POLAR_CODE_LENGTH];
@@ -212,6 +222,7 @@ int main(void) {
                     LLR_Q[i_ch] = -(MAXQR + 1);
                 }
             }
+#endif
 
             /* Decoded message vector */
             int msg_cap[K];
@@ -219,7 +230,7 @@ int main(void) {
             /* Successive Cancellation Decoding */
             const clock_t dec_start = clock();
 
-            Decode(msg_cap, K, LLR_Q, is_info_nodes, data_positions);
+            treeDecode(msg_cap, K, LLR_float, is_info_nodes, data_positions);
 
             const clock_t dec_end = clock();
 
@@ -245,11 +256,14 @@ int main(void) {
     encode_time_used = encode_time_used / CLOCKS_PER_SEC;
     dec_cpu_time_used = dec_cpu_time_used / CLOCKS_PER_SEC;
     printf("Time taken encode %d messages is %0.2f secs\n",
-           NUM_SIM * NUM_EbN0dB, encode_time_used);
+           NUM_SIM * NUM_EbN0dB,
+           encode_time_used);
     printf(
         "Time taken decode %d codewords for unrolled decoder is %0.2f secs\n",
-        NUM_SIM * NUM_EbN0dB, dec_cpu_time_used);
-    printf("Time taken to run %d simulations is %0.2f secs\n\n", NUM_SIM,
+        NUM_SIM * NUM_EbN0dB,
+        dec_cpu_time_used);
+    printf("Time taken to run %d simulations is %0.2f secs\n\n",
+           NUM_SIM,
            cpu_time_used);
     printf("Decoder throughput is %0.2f Mbps\n",
            (float)(NUM_SIM * NUM_EbN0dB) / (dec_cpu_time_used * 1000.0f));
