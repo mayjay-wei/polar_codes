@@ -264,9 +264,16 @@ void scDecodeRecursive(DecodeNode *node, const bool *frozen_bits,
     propagateDecisionUp(node);
 }
 
-void treeScDecode(const float *channel_llr, bool *frozen_bits,
-                  uint8_t *decoded_bits, size_t code_length) {
-    if (!g_root || !channel_llr || !frozen_bits || !decoded_bits) return;
+/**
+ * @brief Tree-based SC decoder (low-level API)
+ * @param channel_llr Channel LLR values (float array)
+ * @param frozen_bits Frozen bit indicators
+ * @param decoded_bits Output decoded bits
+ * @param code_length Code length
+ */
+static void treeScDecode(const float *channel_llr, bool *frozen_bits,
+                  size_t code_length) {
+    if (!g_root || !channel_llr || !frozen_bits) return;
     // 1. 初始化根節點 LLR
     memcpy(g_root->llr_data, channel_llr, g_root->data_length * sizeof(float));
     // 2. 遞歸解碼
@@ -274,9 +281,13 @@ void treeScDecode(const float *channel_llr, bool *frozen_bits,
     // 3. 提取解碼結果
 }
 
-void treeDecode(int *msg_cap, const unsigned K, const float *LLR_float,
-                const bool *info_nodes, const int *data_pos) {
-    if (!g_root || !msg_cap || !LLR_float || !info_nodes || !data_pos) return;
+void treeDecode(int *msg_cap, const unsigned K, const float *LLR_float) {
+    if (!g_root || !msg_cap || !LLR_float) return;
+    /* Boolean array with information nodes pos = 1 */
+    bool info_nodes[1024] = {0};
+    for (unsigned i_Q = 0; i_Q < K; i_Q++) {
+        info_nodes[Q[i_Q + 1024 - K]] = true;
+    }
     size_t code_length = g_root->data_length;
     // 創建凍結位元陣列
     bool frozen_bits[code_length];
@@ -286,7 +297,7 @@ void treeDecode(int *msg_cap, const unsigned K, const float *LLR_float,
     // 解碼
     uint8_t decoded_bits[code_length];
     // 直接使用 float LLR，不需要轉換
-    treeScDecode(LLR_float, frozen_bits, decoded_bits, code_length);
+    treeScDecode(LLR_float, frozen_bits, code_length);
     extractDecodedBits(decoded_bits, K);
     // 提取資訊位元
     for (unsigned i = 0; i < K; i++) {

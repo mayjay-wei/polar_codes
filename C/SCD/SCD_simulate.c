@@ -93,9 +93,9 @@ static const int Q[1024] = {
 
 /* Simulation Parameters */
 // No. of levels of Noise
-#define NUM_EbN0dB (8)
+#define NUM_EbN0dB (6)
 // Number of Simulations
-#define NUM_SIM    (NUM_EbN0dB * 10000)
+#define NUM_SIM    (NUM_EbN0dB * 8192)
 
 #include "tree_encode.h"
 #include "tree_decode.h"
@@ -113,15 +113,15 @@ int main(void) {
     /* Number of information bits */
     const unsigned K = (unsigned)(POLAR_CODE_LENGTH * rate);
 
-    /* Boolean array with information nodes pos = 1 */
-    bool is_info_nodes[POLAR_CODE_LENGTH];
+    // /* Boolean array with information nodes pos = 1 */
+    // bool is_info_nodes[POLAR_CODE_LENGTH];
 
     /* Position of frozen bits */
 
-    // Set the least reliable N-K bits as frozen, i.e., set to 0.
-    for (unsigned i_Q = 0; i_Q < POLAR_CODE_LENGTH - K; i_Q++) {
-        is_info_nodes[Q[i_Q]] = false;
-    }
+    // // Set the least reliable N-K bits as frozen, i.e., set to 0.
+    // for (unsigned i_Q = 0; i_Q < POLAR_CODE_LENGTH - K; i_Q++) {
+    //     is_info_nodes[Q[i_Q]] = false;
+    // }
 
     /* Position of Information bits */
     // The information bit set, K most reliable bits' positions.
@@ -131,13 +131,13 @@ int main(void) {
     // codeword!
     for (unsigned i_Q = 0; i_Q < K; i_Q++) {
         data_positions[i_Q] = Q[i_Q + POLAR_CODE_LENGTH - K];
-        is_info_nodes[Q[i_Q + POLAR_CODE_LENGTH - K]] = true;
+        // is_info_nodes[Q[i_Q + POLAR_CODE_LENGTH - K]] = true;
     }
 
     /* Eb/N0 in dB */
     float EbN0dB[NUM_EbN0dB];
     for (unsigned i_e = 0; i_e < NUM_EbN0dB - 1; i_e++) {
-        EbN0dB[i_e] = -10.0f + 2.0f * (float)i_e;
+        EbN0dB[i_e] = 1.0f + 0.5f * (float)i_e;
     }
     EbN0dB[NUM_EbN0dB - 1] = 1000.0f;
 
@@ -230,7 +230,7 @@ int main(void) {
             /* Successive Cancellation Decoding */
             const clock_t dec_start = clock();
 
-            treeDecode(msg_cap, K, LLR_float, is_info_nodes, data_positions);
+            treeDecode(msg_cap, K, LLR_float);
 
             const clock_t dec_end = clock();
 
@@ -246,7 +246,7 @@ int main(void) {
         }  // end of no. of simulations loop
 
         printf("EbN0dB %0.2f\t", EbN0dB[i_sig]);
-        BER[i_sig] = (float)err_count / (float)(POLAR_CODE_LENGTH * NUM_SIM);
+        BER[i_sig] = (float)err_count / (float)(K * NUM_SIM);
         printf("BER %lf\n", BER[i_sig]);
 
     }  // end of noise var loop
@@ -255,20 +255,21 @@ int main(void) {
     const float cpu_time_used = (float)(end - start) / CLOCKS_PER_SEC;
     encode_time_used = encode_time_used / CLOCKS_PER_SEC;
     dec_cpu_time_used = dec_cpu_time_used / CLOCKS_PER_SEC;
-    printf("Time taken encode %d messages is %0.2f secs\n",
-           NUM_SIM * NUM_EbN0dB,
+    printf("Time taken encode %d info bits is %0.2f secs\n",
+           NUM_SIM * NUM_EbN0dB * K,
            encode_time_used);
     printf(
-        "Time taken decode %d codewords for unrolled decoder is %0.2f secs\n",
-        NUM_SIM * NUM_EbN0dB,
+        "Time taken decode %d info bits for tree decoder is %0.2f secs\n",
+        NUM_SIM * NUM_EbN0dB * K,
         dec_cpu_time_used);
     printf("Time taken to run %d simulations is %0.2f secs\n\n",
            NUM_SIM,
            cpu_time_used);
-    printf("Decoder throughput is %0.2f Mbps\n",
-           (float)(NUM_SIM * NUM_EbN0dB) / (dec_cpu_time_used * 1000.0f));
-    printf("Encoder throughput is %0.2f Mbps\n",
-           (float)(NUM_SIM * NUM_EbN0dB) / (encode_time_used * 1000.0f));
+    printf("Decoder throughput is %.2f Mbps\n",
+           (float)(NUM_SIM * NUM_EbN0dB * K)
+               / (dec_cpu_time_used * 1000.0f));
+    printf("Encoder throughput is %.2f Mbps\n",
+           (float)(NUM_SIM * NUM_EbN0dB * K) / (encode_time_used * 1000.0f));
 
     return 0;
 }
